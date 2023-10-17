@@ -9,12 +9,16 @@ def parse_json(json_string: str):
     return _parse_json(json_string)
 
 
+class BrokenJsonError(ValueError):
+    pass
+
+
 def _parse_json(json_string: str):
     length = len(json_string)
     index = 0
 
     def raise_parsing_error(msg: str):
-        raise ValueError(f"{msg} at position {index}")
+        raise BrokenJsonError(f"{msg} at position {index}")
 
     def parse_any():  # type: () -> str | dict | list | int | float | bool | None
         nonlocal index
@@ -52,11 +56,18 @@ def _parse_json(json_string: str):
         start = index
         escape = False
         index += 1  # skip initial quote
-        while json_string[index] != '"' or escape and json_string[index - 1] == "\\":
-            escape = not escape if json_string[index] == "\\" else False
-            index += 1
-        if index >= length:
-            raise_parsing_error("unterminated string literal")
+        try:
+            while json_string[index] != '"' or escape and json_string[index - 1] == "\\":
+                escape = not escape if json_string[index] == "\\" else False
+                index += 1
+        except IndexError:
+            try:
+                return literal_eval(json_string[start : index - escape] + '"')
+            except SyntaxError:
+                # SyntaxError: (unicode error) truncated \uXXXX or \xXX escape
+                return literal_eval(
+                    json_string[start : json_string.rindex("\\", index - 5, index)] + '"'
+                )
         index += 1  # skip final quote
         return literal_eval(json_string[start:index])
 
@@ -65,20 +76,26 @@ def _parse_json(json_string: str):
         index += 1  # skip initial brace
         skip_blank()
         obj = {}
-        while json_string[index] != "}":
-            skip_blank()
-            key = parse_str()
-            skip_blank()
-            if index >= length or json_string[index] != ":":
-                raise_parsing_error("expected ':' after key in object")
-            index += 1  # skip colon
-            value = parse_any()
-            obj[key] = value
-            skip_blank()
-            if json_string[index] == ",":
-                index += 1  # skip comma
-        if index >= length:
-            raise_parsing_error("expected '}' at end of object")
+        try:
+            while json_string[index] != "}":
+                skip_blank()
+                if index >= length:
+                    return obj
+                key = parse_str()
+                skip_blank()
+                if index >= length or json_string[index] != ":":
+                    return obj
+                index += 1  # skip colon
+                try:
+                    value = parse_any()
+                except BrokenJsonError:
+                    return obj
+                obj[key] = value
+                skip_blank()
+                if json_string[index] == ",":
+                    index += 1  # skip comma
+        except IndexError:
+            return obj
         index += 1  # skip final brace
         return obj
 
@@ -86,11 +103,14 @@ def _parse_json(json_string: str):
         nonlocal index
         index += 1  # skip initial bracket
         arr = []
-        while json_string[index] != "]":
-            arr.append(parse_any())
-            skip_blank()
-            if json_string[index] == ",":
-                index += 1  # skip comma
+        try:
+            while json_string[index] != "]":
+                arr.append(parse_any())
+                skip_blank()
+                if json_string[index] == ",":
+                    index += 1  # skip comma
+        except (IndexError, BrokenJsonError):
+            return arr
         if index >= length or json_string[index] != "]":
             raise_parsing_error("Expected ']' at end of array")
         index += 1  # skip final bracket
@@ -107,15 +127,24 @@ def _parse_json(json_string: str):
                 index += 1
         except IndexError:
             pass
-        return literal_eval(json_string[start:index])
+        try:
+            return literal_eval(json_string[start:index])
+        except SyntaxError:
+            if json_string[start:index] == "-":
+                raise_parsing_error("Not sure what `-` is")
+            return literal_eval(json_string[start : json_string.rindex("e", index - 2)])
+        except ValueError:
+            raise_parsing_error(f"Unknown entity {json_string[start : index]!r}")
 
     def skip_blank():
         nonlocal index
         while index < length and (json_string[index] == " " or json_string[index] == "\n"):
             index += 1
 
-    result = parse_any()
-    skip_blank()
-    if index < length:
-        raise_parsing_error("unexpected character after JSON value")
-    return result
+    return parse_any()
+
+
+dumps = parse_json
+
+
+__all__ = ["dumps", "parse_json", "BrokenJsonError"]

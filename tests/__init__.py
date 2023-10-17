@@ -12,15 +12,38 @@ json = st.recursive(
 )
 
 
-fine_json_bar = tqdm(total=1000, desc="Testing Fine JSON", mininterval=0)
+bar = tqdm(mininterval=0, dynamic_ncols=True)
+FINE_JSON_EXAMPLES = 999
+PARTIAL_JSON_EXAMPLES = 100
 
 
-@settings(max_examples=1000)
+@settings(max_examples=FINE_JSON_EXAMPLES)
 @given(json)
 def test_fine_json(anything):
     assert str(anything) == str(parse_json(dumps(anything, ensure_ascii=False)))
-    fine_json_bar.update()
+    bar.update()
+
+
+@settings(max_examples=PARTIAL_JSON_EXAMPLES, deadline=10_000)
+@given(json)
+def test_partial_json(anything):
+    json_string = dumps(anything, ensure_ascii=False)
+    for i in range(9, len(json_string)):
+        parse_json(json_string[:i])
+    bar.update()
 
 
 def main():
+    bar.clear()
+    bar.reset(PARTIAL_JSON_EXAMPLES)
+    bar.set_description(" Testing Partial JSON ")
+    test_partial_json()
+
+    print()
+
+    bar.clear()
+    bar.reset(FINE_JSON_EXAMPLES)
+    bar.set_description(" Testing F i n e JSON ")
     test_fine_json()
+
+    bar.close()
