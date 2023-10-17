@@ -9,17 +9,36 @@ requires-python = ">=3.8"
 readme = "README.md"
 license = { text = "MIT" }
 scripts = { json-playground = "partial_json_parser.playground:main" }
+keywords = ["JSON", "parser", "LLM", "nlp"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+]
+
+[project.urls]
+repository = "https://github.com/promplate/partial-json-parser"
+homepage = "https://promplate.dev"
 
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [tool.pdm.dev-dependencies]
-dev = ["isort>=5.12.0", "black>=23.9.1", "hypothesis>=6.88.1", "tqdm>=4.66.1"]
+dev = [
+    "isort>=5.12.0",
+    "black>=23.10.0",
+    "hypothesis>=6.88.1",
+    "tqdm>=4.66.1",
+    "pytest>=7.4.2",
+]
 
 [tool.pdm.scripts]
-test = { call = "tests:main" }
+test-hypotheses = { call = "tests:main" }
+test-examples = "pytest tests/examples.py"
+test = { composite = ["test-examples", "test-hypotheses"] }
+format = { composite = ["isort ./{args}", "black ./{args}"] }
 playground = { call = "partial_json_parser.playground:main" }
+pre_build = { composite = ["format"] }
 
 [tool.black]
-line-length = 100
+line-length = 160

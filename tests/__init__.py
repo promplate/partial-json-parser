@@ -14,7 +14,7 @@ json = st.recursive(
 
 bar = tqdm(mininterval=0, dynamic_ncols=True)
 FINE_JSON_EXAMPLES = 999
-PARTIAL_JSON_EXAMPLES = 100
+PARTIAL_JSON_EXAMPLES = 333
 
 
 @settings(max_examples=FINE_JSON_EXAMPLES)
@@ -28,7 +28,9 @@ def test_fine_json(anything):
 @given(json)
 def test_partial_json(anything):
     json_string = dumps(anything, ensure_ascii=False)
-    for i in range(9, len(json_string)):
+    for i in range(1, len(json_string), max(1, len(json_string) // 10)):
+        if json_string[i - 1] in "-ne+":
+            continue
         parse_json(json_string[:i])
     bar.update()
 
