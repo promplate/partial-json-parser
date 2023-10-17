@@ -1,0 +1,11 @@
+__pycache__/
+dist/
+
+pdm.lock
+.pdm.toml
+.pdm-python
+.pdm-build/
+.hypothesis
+.venv
+.vscode
+.idea
