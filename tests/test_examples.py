@@ -2,8 +2,8 @@ from math import isnan
 
 from pytest import raises
 
-from src.partial_json_parser import MalformedJSON, PartialJSON, parse_json
-from src.partial_json_parser.options import *
+from partial_json_parser import MalformedJSON, PartialJSON, parse_json
+from partial_json_parser.options import *
 
 
 def test_str():
@@ -72,4 +72,6 @@ def test_singletons():
 
 def test_num():
     assert parse_json("0", ~NUM) == 0
-    assert parse_json("-1.23e+4", ~NUM) == -1.23e4
+    assert parse_json("-1.25e+4", ~NUM) == -1.25e4
+    assert parse_json("-1.25e+", NUM) == -1.25
+    assert parse_json("-1.25e", NUM) == -1.25

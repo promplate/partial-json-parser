@@ -130,9 +130,13 @@ def _parse_json(json_string: str, allow: Allow):
     def parse_num():  # type: () -> int | float
         nonlocal index
         if index == 0:
+            if json_string == "-":
+                mark_partial_json("Not sure what '-' is")
             try:
                 return literal_eval(json_string)
-            except (SyntaxError, ValueError) as err:
+            except SyntaxError:
+                return literal_eval(json_string[: json_string.rindex("e", index - 2)])
+            except ValueError as err:
                 raise_malformed_error(str(err).capitalize())
         start = index
         try:
@@ -147,10 +151,10 @@ def _parse_json(json_string: str, allow: Allow):
             return literal_eval(json_string[start:index])
         except SyntaxError:
             if json_string[start:index] == "-":
-                mark_partial_json("Not sure what `-` is")
+                mark_partial_json("Not sure what '-' is")
             return literal_eval(json_string[start : json_string.rindex("e", index - 2)])
         except ValueError:
-            mark_partial_json(f"Unknown entity {json_string[start : index]!r}")
+            raise_malformed_error(f"Unknown entity {json_string[start : index]!r}")
 
     def skip_blank():
         nonlocal index

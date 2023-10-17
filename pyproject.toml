@@ -33,8 +33,8 @@ dev = [
 ]
 
 [tool.pdm.scripts]
-test-hypotheses = { call = "tests:main" }
-test-examples = "pytest tests/examples.py"
+test-hypotheses = { call = "tests.test_hypotheses:main" }
+test-examples = "pytest tests/test_examples.py"
 test = { composite = ["test-examples", "test-hypotheses"] }
 format = { composite = ["isort ./{args}", "black ./{args}"] }
 playground = { call = "partial_json_parser.playground:main" }
