@@ -12,7 +12,7 @@ json = st.recursive(
 )
 
 
-bar = tqdm(mininterval=0, dynamic_ncols=True)
+bar = tqdm(mininterval=0, ncols=200)
 FINE_JSON_EXAMPLES = 333
 PARTIAL_JSON_EXAMPLES = 333
 
