@@ -164,7 +164,7 @@ def _parse_json(json_string: str, allow: Allow):
     return parse_any()
 
 
-dumps = decode = parse_json
+loads = decode = parse_json
 
 
-__all__ = ["dumps", "decode", "parse_json", "PartialJSON", "MalformedJSON", "Allow"]
+__all__ = ["loads", "decode", "parse_json", "PartialJSON", "MalformedJSON", "Allow"]
