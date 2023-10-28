@@ -1,14 +1,18 @@
 from ast import literal_eval
+from typing import Dict, List, Union
 
 from .options import *
 
+Number = Union[int, float]
+JSON = Union[str, bool, Number, List["JSON"], Dict[str, "JSON"], None]
 
-def parse_json(json_string: str, allow_partial: Allow = ALL, /):
+
+def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL, /) -> JSON:
     if not isinstance(json_string, str):
         raise TypeError(f"expecting str, got {type(json_string).__name__}")
     if not json_string.strip():
         raise ValueError(f"{json_string!r} is empty")
-    return _parse_json(json_string.strip(), allow_partial)
+    return _parse_json(json_string.strip(), Allow(allow_partial))
 
 
 class PartialJSON(ValueError):
@@ -29,7 +33,7 @@ def _parse_json(json_string: str, allow: Allow):
     def raise_malformed_error(msg: str):
         raise MalformedJSON(f"{msg} at position {index}")
 
-    def parse_any():  # type: () -> str | dict | list | int | float | bool | None
+    def parse_any() -> JSON:
         nonlocal index
         skip_blank()
         if index >= length:
@@ -60,7 +64,7 @@ def _parse_json(json_string: str, allow: Allow):
             return float("nan")
         return parse_num()
 
-    def parse_str():  # type: () -> str
+    def parse_str() -> str:
         nonlocal index
         start = index
         escape = False
@@ -80,7 +84,7 @@ def _parse_json(json_string: str, allow: Allow):
         index += 1  # skip final quote
         return literal_eval(json_string[start:index])
 
-    def parse_obj():
+    def parse_obj() -> Dict[str, JSON]:
         nonlocal index
         index += 1  # skip initial brace
         skip_blank()
@@ -110,7 +114,7 @@ def _parse_json(json_string: str, allow: Allow):
         index += 1  # skip final brace
         return obj
 
-    def parse_arr():
+    def parse_arr() -> List[JSON]:
         nonlocal index
         index += 1  # skip initial bracket
         arr = []
@@ -127,7 +131,7 @@ def _parse_json(json_string: str, allow: Allow):
         index += 1  # skip final bracket
         return arr
 
-    def parse_num():  # type: () -> int | float
+    def parse_num() -> Union[Number, None]:
         nonlocal index
         if index == 0:
             if json_string == "-":
@@ -167,4 +171,4 @@ def _parse_json(json_string: str, allow: Allow):
 loads = decode = parse_json
 
 
-__all__ = ["loads", "decode", "parse_json", "PartialJSON", "MalformedJSON", "Allow"]
+__all__ = ["loads", "decode", "parse_json", "PartialJSON", "MalformedJSON", "Allow", "JSON"]
