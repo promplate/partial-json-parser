@@ -12,7 +12,7 @@ json = st.recursive(
 )
 
 
-bar = tqdm(mininterval=0, ncols=200)
+bar = tqdm(ascii=True, ncols=200, leave=False)
 FINE_JSON_EXAMPLES = 333
 PARTIAL_JSON_EXAMPLES = 333
 
@@ -36,16 +36,14 @@ def test_partial_json(anything):
 
 
 def main():
+    bar.set_description(" Testing Partial JSON ", False)
     bar.clear()
     bar.reset(PARTIAL_JSON_EXAMPLES)
-    bar.set_description(" Testing Partial JSON ")
     test_partial_json()
 
-    print()
-
+    bar.set_description(" Testing F i n e JSON ", False)
     bar.clear()
     bar.reset(FINE_JSON_EXAMPLES)
-    bar.set_description(" Testing F i n e JSON ")
     test_fine_json()
 
     bar.close()
