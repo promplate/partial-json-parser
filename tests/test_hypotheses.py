@@ -1,8 +1,13 @@
 from json import dumps
+from os import getcwd
+from sys import path
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from tqdm import tqdm
+
+print(getcwd())
+path.append(f"{getcwd()}/src")
 
 from partial_json_parser import parse_json
 

@@ -1,6 +1,11 @@
 from math import isnan
+from os import getcwd
+from sys import path
 
 from pytest import raises
+
+print(getcwd())
+path.append(f"{getcwd()}/src")
 
 from partial_json_parser import MalformedJSON, PartialJSON, parse_json
 from partial_json_parser.options import *
