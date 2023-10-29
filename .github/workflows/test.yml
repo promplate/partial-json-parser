@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.7", "pypy3.7"]
+        python-version: ["3.4", "pypy3.4", "3.5", "pypy3.5", "3.6", "pypy3.6", "3.7", "pypy3.7"]
 
     steps:
       - uses: actions/checkout@v3
@@ -19,9 +19,11 @@ jobs:
         uses: pdm-project/setup-pdm@v3
         with:
           python-version: ${{ matrix.python-version }}
+          architecture: x86
       - name: Install dependencies
         run: |
-          pdm install
+          mkdir __pypackages__
+          pdm sync -d --no-editable
       - name: Run tests
         run: |
           pdm test
