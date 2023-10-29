@@ -7,7 +7,7 @@ Number = Union[int, float]
 JSON = Union[str, bool, Number, List["JSON"], Dict[str, "JSON"], None]
 
 
-def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL, /) -> JSON:
+def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL) -> JSON:
     if not isinstance(json_string, str):
         raise TypeError(f"expecting str, got {type(json_string).__name__}")
     if not json_string.strip():
