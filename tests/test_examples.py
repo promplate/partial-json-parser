@@ -45,7 +45,7 @@ def test_obj():
 
 
 def test_singletons():
-    assert parse_json("n", NULL) == None
+    assert parse_json("n", NULL) is None
     with raises(MalformedJSON):
         parse_json("n", ~NULL)
 
