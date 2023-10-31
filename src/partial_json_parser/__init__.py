@@ -76,7 +76,7 @@ def _parse_json(json_string: str, allow: Allow):
         except IndexError:
             if STR in allow:
                 try:
-                    return literal_eval(json_string[start : index - escape] + '"')
+                    return literal_eval(f'{json_string[start:index - escape]}"')
                 except SyntaxError:
                     # SyntaxError: (unicode error) truncated \uXXXX or \xXX escape
                     return literal_eval(json_string[start : json_string.rindex("\\", max(0, index - 5))] + '"')
@@ -162,7 +162,7 @@ def _parse_json(json_string: str, allow: Allow):
 
     def skip_blank():
         nonlocal index
-        while index < length and (json_string[index] == " " or json_string[index] == "\n"):
+        while index < length and json_string[index] in [" ", "\n"]:
             index += 1
 
     return parse_any()
