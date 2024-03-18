@@ -146,7 +146,7 @@ def _parse_json(json_string: str, allow: Allow):
         try:
             if json_string[index] == "-":
                 index += 1
-            while json_string[index] not in ",]}":
+            while json_string[index] not in ",]} \n\r\t":
                 index += 1
         except IndexError:
             if NUM not in allow:
@@ -162,7 +162,7 @@ def _parse_json(json_string: str, allow: Allow):
 
     def skip_blank():
         nonlocal index
-        while index < length and json_string[index] in [" ", "\n"]:
+        while index < length and json_string[index] in " \n\r\t":
             index += 1
 
     return parse_any()
