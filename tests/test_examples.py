@@ -46,27 +46,27 @@ def test_obj():
 
 def test_singletons():
     assert parse_json("n", NULL) is None
-    with raises(MalformedJSON):
+    with raises(PartialJSON):
         parse_json("n", ~NULL)
 
     assert parse_json("t", BOOL) == True
-    with raises(MalformedJSON):
+    with raises(PartialJSON):
         parse_json("t", ~BOOL)
 
     assert parse_json("f", BOOL) == False
-    with raises(MalformedJSON):
+    with raises(PartialJSON):
         parse_json("f", ~BOOL)
 
     assert parse_json("I", INF) == float("inf")
-    with raises(MalformedJSON):
+    with raises(PartialJSON):
         parse_json("I", ~INFINITY)
 
     assert parse_json("-I", INF) == float("-inf")
-    with raises(MalformedJSON):
+    with raises(PartialJSON):
         parse_json("-I", ~_INFINITY)
 
-    assert isnan(parse_json("N", NAN))
-    with raises(MalformedJSON):
+    assert isnan(parse_json("N", NAN))  # type: ignore
+    with raises(PartialJSON):
         parse_json("N", ~NAN)
 
 

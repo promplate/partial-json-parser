@@ -1,174 +1,242 @@
-from ast import literal_eval
-from typing import Dict, List, Union
+from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
 
 from .options import *
 
 Number = Union[int, float]
 JSON = Union[str, bool, Number, List["JSON"], Dict[str, "JSON"], None]
 
+CompleteResult = Union[Tuple[int, Union[str, Literal[True]]], Literal[False]]  # (length, complete_string / already completed) / partial
 
-def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL) -> JSON:
+
+class JSONDecodeError(ValueError):
+    pass
+
+
+class PartialJSON(JSONDecodeError):
+    pass
+
+
+class MalformedJSON(JSONDecodeError):
+    pass
+
+
+def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL, parser: Optional[Callable[[str], JSON]] = None) -> JSON:
+    if parser is None:
+        from json import loads as parser
+
     if not isinstance(json_string, str):
-        raise TypeError(f"expecting str, got {type(json_string).__name__}")
+        raise TypeError(f"Expected str, got {type(json_string).__name__}")
     if not json_string.strip():
         raise ValueError(f"{json_string!r} is empty")
-    return _parse_json(json_string.strip(), Allow(allow_partial))
+    return _parse_json(json_string.strip(), Allow(allow_partial), parser)
 
 
-class PartialJSON(ValueError):
-    pass
+def _parse_json(json_string: str, allow: Allow, parser: Callable[[str], JSON]):
+    result = complete_any(json_string, allow, is_top_level=True)  # setting is_top_level to True to treat literal numbers as complete
+    if result is False:
+        raise PartialJSON
+    if result[1] is True:
+        return parser(json_string[: result[0]])
+    return parser(json_string[: result[0]] + result[1])
 
 
-class MalformedJSON(ValueError):
-    pass
-
-
-def _parse_json(json_string: str, allow: Allow):
-    length = len(json_string)
-    index = 0
-
-    def mark_partial_json(msg: str):
-        raise PartialJSON(f"{msg} at position {index}")
-
-    def raise_malformed_error(msg: str):
-        raise MalformedJSON(f"{msg} at position {index}")
-
-    def parse_any() -> JSON:
-        nonlocal index
-        skip_blank()
-        if index >= length:
-            mark_partial_json("Unexpected end of input")
-        if json_string[index] == '"':
-            return parse_str()
-        if json_string[index] == "{":
-            return parse_obj()
-        if json_string[index] == "[":
-            return parse_arr()
-        if json_string[index : index + 4] == "null" or NULL in allow and length - index < 4 and "null".startswith(json_string[index:]):
-            index += 4
-            return None
-        if json_string[index : index + 4] == "true" or BOOL in allow and length - index < 4 and "true".startswith(json_string[index:]):
-            index += 4
-            return True
-        if json_string[index : index + 5] == "false" or BOOL in allow and length - index < 5 and "false".startswith(json_string[index:]):
-            index += 5
-            return False
-        if json_string[index : index + 8] == "Infinity" or INFINITY in allow and length - index < 8 and "Infinity".startswith(json_string[index:]):
-            index += 8
-            return float("inf")
-        if json_string[index : index + 9] == "-Infinity" or _INFINITY in allow and 1 < length - index < 9 and "-Infinity".startswith(json_string[index:]):
-            index += 9
-            return float("-inf")
-        if json_string[index : index + 3] == "NaN" or NAN in allow and length - index < 3 and "NaN".startswith(json_string[index:]):
-            index += 3
-            return float("nan")
-        return parse_num()
-
-    def parse_str() -> str:
-        nonlocal index
-        start = index
-        escape = False
-        index += 1  # skip initial quote
-        try:
-            while json_string[index] != '"' or escape and json_string[index - 1] == "\\":
-                escape = not escape if json_string[index] == "\\" else False
-                index += 1
-        except IndexError:
-            if STR in allow:
-                try:
-                    return literal_eval(f'{json_string[start:index - escape]}"')
-                except SyntaxError:
-                    # SyntaxError: (unicode error) truncated \uXXXX or \xXX escape
-                    return literal_eval(json_string[start : json_string.rindex("\\", max(0, index - 5))] + '"')
-            mark_partial_json("Unterminated string literal")
-        index += 1  # skip final quote
-        return literal_eval(json_string[start:index])
-
-    def parse_obj() -> Dict[str, JSON]:
-        nonlocal index
-        index += 1  # skip initial brace
-        skip_blank()
-        obj = {}
-        try:
-            while json_string[index] != "}":
-                skip_blank()
-                if index >= length:
-                    return obj
-                key = parse_str()
-                skip_blank()
-                index += 1  # skip colon
-                try:
-                    value = parse_any()
-                except PartialJSON:
-                    if OBJ in allow:
-                        return obj
-                    raise
-                obj[key] = value
-                skip_blank()
-                if json_string[index] == ",":
-                    index += 1  # skip comma
-        except (IndexError, PartialJSON):
-            if OBJ in allow:
-                return obj
-            mark_partial_json("Expected '}' at end of object")
-        index += 1  # skip final brace
-        return obj
-
-    def parse_arr() -> List[JSON]:
-        nonlocal index
-        index += 1  # skip initial bracket
-        arr = []
-        try:
-            while json_string[index] != "]":
-                arr.append(parse_any())
-                skip_blank()
-                if json_string[index] == ",":
-                    index += 1  # skip comma
-        except (IndexError, PartialJSON):
-            if ARR in allow:
-                return arr
-            mark_partial_json("Expected ']' at end of array")
-        index += 1  # skip final bracket
-        return arr
-
-    def parse_num() -> Union[Number, None]:
-        nonlocal index
-        if index == 0:
-            if json_string == "-":
-                mark_partial_json("Not sure what '-' is")
-            try:
-                return literal_eval(json_string)
-            except SyntaxError:
-                return literal_eval(json_string[: json_string.rindex("e", index - 2)])
-            except ValueError as err:
-                raise_malformed_error(str(err).capitalize())
-        start = index
-        try:
-            if json_string[index] == "-":
-                index += 1
-            while json_string[index] not in ",]} \n\r\t":
-                index += 1
-        except IndexError:
-            if NUM not in allow:
-                mark_partial_json("Unterminated number literal")
-        try:
-            return literal_eval(json_string[start:index])
-        except SyntaxError:
-            if json_string[start:index] == "-":
-                mark_partial_json("Not sure what '-' is")
-            return literal_eval(json_string[start : json_string.rindex("e", index - 2)])
-        except ValueError:
-            raise_malformed_error(f"Unknown entity {json_string[start : index]!r}")
-
-    def skip_blank():
-        nonlocal index
-        while index < length and json_string[index] in " \n\r\t":
+def skip_blank(text: str, index: int):
+    try:
+        while text[index].isspace():
             index += 1
+    finally:
+        return index
 
-    return parse_any()
+
+def complete_any(json_string: str, allow: Allow, is_top_level=False) -> CompleteResult:
+    i = skip_blank(json_string, 0)
+    char = json_string[i]
+
+    if char == '"':
+        return complete_str(json_string, allow)
+
+    if char in "1234567890":
+        return complete_num(json_string, allow, is_top_level)
+
+    if char == "[":
+        return complete_arr(json_string, allow)
+
+    if char == "{":
+        return complete_obj(json_string, allow)
+
+    if json_string.startswith("null"):
+        return (4, True)
+    if "null".startswith(json_string):
+        return (0, "null") if NULL in allow else False
+
+    if json_string.startswith("true"):
+        return (4, True)
+    if "true".startswith(json_string):
+        return (0, "true") if BOOL in allow else False
+
+    if json_string.startswith("false"):
+        return (5, True)
+    if "false".startswith(json_string):
+        return (0, "false") if BOOL in allow else False
+
+    if json_string.startswith("Infinity"):
+        return (8, True)
+    if "Infinity".startswith(json_string):
+        return (0, "Infinity") if INFINITY in allow else False
+
+    if char == "-":
+        if len(json_string) == 1:
+            return False
+        elif json_string[1] != "I":
+            return complete_num(json_string, allow, is_top_level)
+
+    if json_string.startswith("-Infinity"):
+        return (9, True)
+    if "-Infinity".startswith(json_string):
+        return (0, "-Infinity") if _INFINITY in allow else False
+
+    if json_string.startswith("NaN"):
+        return (3, True)
+    if "NaN".startswith(json_string):
+        return (0, "NaN") if NAN in allow else False
+
+    raise MalformedJSON(f"Unexpected character {char}")
+
+
+def complete_str(json_string: str, allow: Allow) -> CompleteResult:
+    assert json_string[0] == '"'
+
+    i = 1
+    escaped = False
+
+    try:
+        while json_string[i] != '"' or escaped:
+            escaped = not escaped if json_string[i] == "\\" else False
+            i += 1
+
+        return i + 1, True
+
+    except IndexError:
+        if STR not in allow:
+            return False
+
+        # \uXXXX
+        _u = json_string.rfind("\\u", max(0, i - 5), i)
+        if _u != -1:
+            return _u, '"'
+
+        # \UXXXXXXXX
+        _U = json_string.rfind("\\U", max(0, i - 9), i)
+        if _U != -1:
+            return _U, '"'
+
+        # \xXX
+        _x = json_string.rfind("\\x", max(0, i - 3), i)
+        if _x != -1:
+            return _x, '"'
+
+        return i - escaped, '"'
+
+
+def complete_arr(json_string: str, allow: Allow) -> CompleteResult:
+    assert json_string[0] == "["
+    i = j = 1
+
+    try:
+        while True:
+            j = skip_blank(json_string, j)
+
+            if json_string[j] == "]":
+                return j + 1, True
+
+            result = complete_any(json_string[j:], allow)
+
+            if result is False:  # incomplete
+                return (i, "]") if ARR in allow else False
+            if result[1] is True:  # complete
+                i = j = j + result[0]
+            else:  # incomplete
+                return (j + result[0], result[1] + "]") if ARR in allow else False
+
+            j = skip_blank(json_string, j)
+
+            if json_string[j] == ",":
+                j += 1
+            elif json_string[j] == "]":
+                return j + 1, True
+            else:
+                raise MalformedJSON(f"Expected ',' or ']', got {json_string[j]}")
+    except IndexError:
+        return (i, "]") if ARR in allow else False
+
+
+def complete_obj(json_string: str, allow: Allow) -> CompleteResult:
+    assert json_string[0] == "{"
+    i = j = 1
+
+    try:
+        while True:
+            j = skip_blank(json_string, j)
+
+            if json_string[j] == "}":
+                return j + 1, True
+
+            result = complete_str(json_string[j:], allow)
+            if result and result[1] is True:  # complete
+                j += result[0]
+            else:  # incomplete
+                return (i, "}") if OBJ in allow else False
+
+            j = skip_blank(json_string, j)
+
+            if json_string[j] != ":":
+                raise MalformedJSON(f"Expected ':', got {json_string[j]}")
+            j += 1
+
+            j = skip_blank(json_string, j)
+
+            result = complete_any(json_string[j:], allow)
+            if result is False:  # incomplete
+                return (i, "}") if OBJ in allow else False
+            if result[1] is True:  # complete
+                i = j = j + result[0]
+            else:  # incomplete
+                return (j + result[0], result[1] + "}") if OBJ in allow else False
+
+            j = skip_blank(json_string, j)
+
+            if json_string[j] == ",":
+                j += 1
+            elif json_string[j] == "}":
+                return j + 1, True
+            else:
+                raise MalformedJSON(f"Expected ',' or '}}', got {json_string[j]}")
+    except IndexError:
+        return (i, "}") if OBJ in allow else False
+
+
+def complete_num(json_string: str, allow: Allow, is_top_level=False) -> CompleteResult:
+    i = 1
+    length = len(json_string)
+
+    # forward
+    while i < length and json_string[i] in "1234567890.-+eE":
+        i += 1
+
+    modified = False
+
+    # backward
+    while json_string[i - 1] in ".-+eE":
+        modified = True
+        i -= 1
+
+    if modified or i == length and not is_top_level:
+        return (i, "") if NUM in allow else False
+    else:
+        return i, True
 
 
 loads = decode = parse_json
 
 
-__all__ = ["loads", "decode", "parse_json", "PartialJSON", "MalformedJSON", "Allow", "JSON"]
+__all__ = ["loads", "decode", "parse_json", "JSONDecodeError", "PartialJSON", "MalformedJSON", "Allow", "JSON"]
