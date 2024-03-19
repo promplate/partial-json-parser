@@ -1,11 +1,14 @@
-from typing import Callable, Dict, List, Literal, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from .options import *
 
 Number = Union[int, float]
 JSON = Union[str, bool, Number, List["JSON"], Dict[str, "JSON"], None]
 
-CompleteResult = Union[Tuple[int, Union[str, Literal[True]]], Literal[False]]  # (length, complete_string / already completed) / partial
+if TYPE_CHECKING:
+    from typing import Literal
+
+CompleteResult = Union[Tuple[int, Union[str, "Literal[True]"]], "Literal[False]"]  # (length, complete_string / already completed) / partial
 
 
 class JSONDecodeError(ValueError):
