@@ -11,6 +11,9 @@ def test_str():
     with raises(PartialJSON):
         parse_json('"', ~STR)
 
+    assert parse_json(r'"\\') == "\\"
+    assert parse_json(r'"\\u') == "\\u"
+
 
 def test_arr():
     assert parse_json('["', ARR) == []

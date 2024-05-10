@@ -110,35 +110,48 @@ def complete_str(json_string: str, allow: Allow) -> CompleteResult:
     assert json_string[0] == '"'
 
     i = 1
+    last_escaped = -1  # because `str.rfind` returns -1 if not found
     escaped = False
 
     try:
-        while json_string[i] != '"' or escaped:
-            escaped = not escaped if json_string[i] == "\\" else False
-            i += 1
+        while True:
+            char = json_string[i]
 
-        return i + 1, True
+            if escaped:
+                escaped = False
+
+            elif char == "\\":
+                escaped = True
+                last_escaped = i + 1
+
+            elif char == '"':
+                return i + 1, True
+
+            i += 1
 
     except IndexError:
         if STR not in allow:
             return False
 
+        if escaped:
+            return i - 1, '"'
+
         # \uXXXX
         _u = json_string.rfind("\\u", max(0, i - 5), i)
-        if _u != -1:
+        if last_escaped != _u != -1:
             return _u, '"'
 
         # \UXXXXXXXX
         _U = json_string.rfind("\\U", max(0, i - 9), i)
-        if _U != -1:
+        if last_escaped != _U != -1:
             return _U, '"'
 
         # \xXX
         _x = json_string.rfind("\\x", max(0, i - 3), i)
-        if _x != -1:
+        if last_escaped != _x != -1:
             return _x, '"'
 
-        return i - escaped, '"'
+        return i, '"'
 
 
 def complete_arr(json_string: str, allow: Allow) -> CompleteResult:
