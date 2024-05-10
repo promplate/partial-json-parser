@@ -1,9 +1,9 @@
-from json import dumps
-
 from rich.console import Console
 from rich.highlighter import JSONHighlighter
+from rich.style import Style
+from rich.text import Span
 
-from partial_json_parser import parse_json
+from partial_json_parser import ALL, PartialJSON, complete_any
 
 console = Console()
 highlight = JSONHighlighter()
@@ -12,8 +12,19 @@ highlight = JSONHighlighter()
 def main():
     while True:
         try:
-            json = dumps(parse_json(console.input("[d]>>> ")), ensure_ascii=False)
-            console.print(" " * 3, highlight(json))
+            input_str = console.input("[d]>>> ")
+            result = complete_any(input_str, ALL, is_top_level=True)
+            if result is False:
+                raise PartialJSON
+            index, completion = result
+            json = input_str if completion is True else input_str[:index] + completion
+
+            rich_text = highlight(json)
+            if completion is not True and completion:
+                rich_text.spans.append(Span(index, len(json), Style(dim=True)))
+
+            console.print(" " * 3, rich_text)
+
         except KeyboardInterrupt:
             return
         except Exception as err:
