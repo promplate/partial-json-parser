@@ -78,3 +78,12 @@ def test_num():
     assert parse_json("-1.25e+4", ~NUM) == -1.25e4
     assert parse_json("-1.25e+", NUM) == -1.25
     assert parse_json("-1.25e", NUM) == -1.25
+
+
+def test_error():
+    with raises(MalformedJSON):
+        parse_json("a")
+    with raises(MalformedJSON):
+        parse_json("{0")
+    with raises(MalformedJSON):
+        parse_json("--")

@@ -35,7 +35,10 @@ def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL, parser:
 
 
 def _parse_json(json_string: str, allow: Allow, parser: Callable[[str], JSON]):
-    result = complete_any(json_string, allow, is_top_level=True)  # setting is_top_level to True to treat literal numbers as complete
+    try:
+        result = complete_any(json_string, allow, is_top_level=True)  # setting is_top_level to True to treat literal numbers as complete
+    except (AssertionError, IndexError) as err:
+        raise MalformedJSON(*err.args) from err
     if result is False:
         raise PartialJSON
     if result[1] is True:
