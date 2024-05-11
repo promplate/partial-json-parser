@@ -3,7 +3,7 @@
 from re import compile
 from typing import List, Tuple, Union
 
-from .complete import complete_str, fix
+from .complete import fix
 from .exceptions import PartialJSON
 from .options import *
 
@@ -26,6 +26,8 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
 
     stack = []
     in_string = False
+    last_string_start = 0
+    last_string_end = 0
 
     tokens = scan(json_string)
 
@@ -34,8 +36,12 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
 
     for i, char in tokens:
         if char == '"':
-            if not in_string or not is_escaped(i):
-                in_string = not in_string
+            if not in_string:
+                in_string = True
+                last_string_start = i
+            elif not is_escaped(i):
+                in_string = False
+                last_string_end = i
 
         elif not in_string:
             if char == "}":
@@ -54,6 +60,13 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
 
     allow = Allow(allow_partial)
 
+    if STR not in allow and in_string:
+        last_comma = json_string.rfind(",", i + 1)
+        if last_comma == -1:
+            return json_string[: stack[-1][0] + 1], join_closing_tokens(stack)
+        i, char = stack.pop()  # get last container token
+        head, tail = fix(char + json_string[last_comma + 1 :], allow)
+        return json_string[:i] + head, tail + join_closing_tokens(stack)
     if OBJ not in allow:
         for index, [i, char] in enumerate(stack):
             if char == "{":
@@ -67,36 +80,97 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
                     raise PartialJSON("Partial array is not allowed")
                 return json_string[:i], join_closing_tokens(stack[:index])
 
-    if json_string[-1] in "]}" and not in_string:  # the last token is a closing token
-        return json_string[: i + 1], "".join("}" if char == "{" else "]" for _, char in reversed(stack))
+    # only fix the rest of the container in O(1) time complexity
 
-    if char == '"':
-        if in_string:
-            if STR not in allow:
-                i, char = tokens[-2]
-                if char != '"' or stack[-2][1] != "{":
-                    return json_string[: i + 1], join_closing_tokens(stack)
-            elif stack[-1][1] != "{":
-                index, tail = complete_str(json_string[i:], allow)  # type: ignore
-                return json_string[: i + index], tail + join_closing_tokens(stack)  # type: ignore
+    assert in_string == (last_string_end < last_string_start)
 
-        if stack[-1][1] == "[":
-            rest = json_string[i + 1 :].rstrip("-").strip().lstrip(",")  # maybe `, -`
-            if rest:
-                head, tail = fix("[" + rest, allow)
-                assert head[0] == "[" and tail[-1] == "]"
-                return json_string[: i + 1] + "," + head[1:], tail + join_closing_tokens(stack[:-1])
-            return json_string[: i + 1], join_closing_tokens(stack)
+    if in_string:
+        if stack[-1][1] == "[":  # [ ... "val
+            head, tail = fix(json_string[last_string_start:], allow)  # fix the last string
+            return json_string[:last_string_start] + head, tail + join_closing_tokens(stack)
 
-    # worst case when the last container need to be parsed by the fallback parser
+        assert stack[-1][1] == "{"  # { ... "val
 
-    index, char = stack.pop()
+        start = max(last_string_end, stack[-1][0])
 
-    last_entity = json_string[index:]
+        if "," in json_string[start + 1 : last_string_start]:
+            # { ... "k": "v", "key
+            # { ... "k": 123, "key
+            last_comma = json_string.rindex(",", start, last_string_start)
+            head, tail = fix(stack[-1][1] + json_string[last_comma + 1 :], allow)
+            return json_string[:last_comma] + head[1:], tail + join_closing_tokens(stack[:-1])
 
-    if not last_entity:
-        return json_string[:index], join_closing_tokens(stack)
+        if ":" in json_string[start + 1 : last_string_start]:
+            # { ... ": "val
+            head, tail = fix(json_string[last_string_start:], allow)  # fix the last string (same as array)
+            return json_string[:last_string_start] + head, tail + join_closing_tokens(stack)
 
-    head, tail = fix(last_entity, allow_partial)
+        # {"key
+        return json_string[:last_string_start], join_closing_tokens(stack)
 
-    return json_string[:index] + head, tail + join_closing_tokens(stack)
+    last_comma = json_string.rfind(",", max(last_string_end, i) + 1)
+
+    if last_comma != -1:
+        i, char = stack[-1]
+
+        if not json_string[last_comma + 1 :].strip():  # comma at the end
+            # { ... "key": "value",
+            return json_string[:last_comma], join_closing_tokens(stack)
+
+        assert char == "[", json_string  # array with many non-string literals
+
+        # [ ..., 1, 2, 3, 4
+
+        head, tail = fix(char + json_string[last_comma + 1 :], allow)
+        if not head[1:] + tail[:-1].strip():  # empty, so trim the last comma
+            return json_string[:last_comma] + head[1:], tail + join_closing_tokens(stack[:-1])
+        return json_string[: last_comma + 1] + head[1:], tail + join_closing_tokens(stack[:-1])
+
+    # can't find comma after the last string and after the last container token
+
+    if char in "]}":
+        # ... [ ... ]
+        # ... { ... }
+        assert not json_string[i + 1 :].strip()
+        return json_string, join_closing_tokens(stack)
+
+    if char in "[{":
+        # ... [ ...
+        # ... { ...
+        head, tail = fix(json_string[i:], allow)
+        return json_string[:i] + head, tail + join_closing_tokens(stack[:-1])
+
+    assert char == '"'
+
+    i, char = stack[-1]
+
+    if char == "[":  # [ ... "val"
+        return json_string, join_closing_tokens(stack)
+
+    assert char == "{"
+    last_colon = json_string.rfind(":", last_string_end)
+    last_comma = json_string.rfind(",", i + 1, last_string_start)
+
+    if last_comma == -1:  # only 1 key
+        # ... { "key"
+        # ... { "key": "value"
+        head, tail = fix(json_string[i:], allow)
+        return json_string[:i] + head, tail + join_closing_tokens(stack[:-1])
+
+    if last_colon == -1:
+        if json_string.rfind(":", max(i, last_comma) + 1, last_string_start) != -1:
+            # { ... , "key": "value"
+            return json_string, join_closing_tokens(stack)
+
+        # { ... , "key"
+        head, tail = fix("{" + json_string[last_comma + 1 :], allow)
+        if not head[1:] + tail[:-1].strip():
+            return json_string[:last_comma] + head[1:], tail + join_closing_tokens(stack[:-1])
+        return json_string[: last_comma + 1] + head[1:], tail + join_closing_tokens(stack)
+
+    assert last_colon > last_comma  # { ... , "key":
+
+    head, tail = fix("{" + json_string[last_comma + 1 :], allow)
+    if not head[1:] + tail[:-1].strip():
+        return json_string[:last_comma] + head[1:], tail + join_closing_tokens(stack[:-1])
+    return json_string[: last_comma + 1] + head[1:], tail + join_closing_tokens(stack[:-1])

@@ -1,3 +1,5 @@
+from itertools import accumulate
+from json import dumps
 from math import isnan
 
 from pytest import raises
@@ -101,3 +103,17 @@ def test_fix():
     assert fix("1", ~NUM) == fix_fast("1", ~NUM) == ("1", "")
     with raises(PartialJSON):
         fix("-")
+
+
+def test_consistency():
+    dict_example = {"key1": 123, "key2": "value"}
+    list_example = [1, 2, None, float("inf"), float("-inf"), float("nan"), True, False, "string", dict_example]
+
+    dict_json = dumps(dict_example)
+    list_json = dumps(list_example)
+
+    for json in accumulate(dict_json):
+        assert fix(json) == fix_fast(json)
+
+    for json in accumulate(list_json):
+        assert fix(json) == fix_fast(json)
