@@ -45,3 +45,6 @@ line-length = 160
 
 [tool.isort]
 profile = "black"
+
+[tool.pyright]
+reportPossiblyUnboundVariable = false
