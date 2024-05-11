@@ -4,7 +4,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 from tqdm import tqdm
 
-from partial_json_parser import parse_json
+from partial_json_parser.core.api import parse_json
 
 json = st.recursive(
     st.none() | st.booleans() | st.floats() | st.text(),

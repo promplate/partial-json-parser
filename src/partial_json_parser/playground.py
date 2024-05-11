@@ -3,7 +3,7 @@ from rich.highlighter import JSONHighlighter
 from rich.style import Style
 from rich.text import Span
 
-from partial_json_parser import fix
+from partial_json_parser.core.myelin import fix_fast
 
 console = Console()
 highlight = JSONHighlighter()
@@ -14,7 +14,7 @@ def main():
         try:
             input_str = console.input("[d]>>> ")
 
-            head, tail = fix(input_str)
+            head, tail = fix_fast(input_str)
             json = head + tail
 
             rich_text = highlight(json)

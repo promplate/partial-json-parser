@@ -1,40 +1,12 @@
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Tuple, Union
 
+from .exceptions import MalformedJSON, PartialJSON
 from .options import *
-
-Number = Union[int, float]
-JSON = Union[str, bool, Number, List["JSON"], Dict[str, "JSON"], None]
 
 if TYPE_CHECKING:
     from typing import Literal
 
 CompleteResult = Union[Tuple[int, Union[str, "Literal[True]"]], "Literal[False]"]  # (length, complete_string / already completed) / partial
-
-
-class JSONDecodeError(ValueError):
-    pass
-
-
-class PartialJSON(JSONDecodeError):
-    pass
-
-
-class MalformedJSON(JSONDecodeError):
-    pass
-
-
-def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL, parser: Optional[Callable[[str], JSON]] = None) -> JSON:
-    if parser is None:
-        from json import loads as parser
-
-    return parser(ensure_json(json_string, allow_partial))
-
-
-def ensure_json(json_string: str, allow_partial: Union[Allow, int] = ALL):
-    """get the completed JSON string"""
-
-    head, tail = fix(json_string, allow_partial)
-    return head + tail
 
 
 def fix(json_string: str, allow_partial: Union[Allow, int] = ALL):
@@ -258,9 +230,3 @@ def complete_num(json_string: str, allow: Allow, is_top_level=False) -> Complete
         return (i, "") if NUM in allow else False
     else:
         return i, True
-
-
-loads = decode = parse_json
-
-
-__all__ = ["loads", "decode", "parse_json", "fix", "ensure_json", "JSONDecodeError", "PartialJSON", "MalformedJSON", "Allow", "JSON"]

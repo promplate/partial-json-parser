@@ -2,8 +2,11 @@ from math import isnan
 
 from pytest import raises
 
-from partial_json_parser import MalformedJSON, PartialJSON, fix, parse_json
-from partial_json_parser.options import *
+from partial_json_parser.core.api import parse_json
+from partial_json_parser.core.complete import fix
+from partial_json_parser.core.exceptions import MalformedJSON, PartialJSON
+from partial_json_parser.core.myelin import fix_fast
+from partial_json_parser.core.options import *
 
 
 def test_str():
@@ -90,11 +93,11 @@ def test_error():
 
 
 def test_fix():
-    assert fix("[") == ("[", "]")
-    assert fix("[0.") == ("[0", "]")
-    assert fix('{"key": ') == ("{", "}")
-    assert fix("t") == ("", "true")
-    assert fix("[1", ~NUM) == ("[", "]")
-    assert fix("1", ~NUM) == ("1", "")
+    assert fix("[") == fix_fast("[") == ("[", "]")
+    assert fix("[0.") == fix_fast("[0.") == ("[0", "]")
+    assert fix('{"key": ') == fix_fast('{"key": ') == ("{", "}")
+    assert fix("t") == fix_fast("t") == ("", "true")
+    assert fix("[1", ~NUM) == fix_fast("[1", ~NUM) == ("[", "]")
+    assert fix("1", ~NUM) == fix_fast("1", ~NUM) == ("1", "")
     with raises(PartialJSON):
         fix("-")
