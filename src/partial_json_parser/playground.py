@@ -3,7 +3,7 @@ from rich.highlighter import JSONHighlighter
 from rich.style import Style
 from rich.text import Span
 
-from partial_json_parser.core.myelin import fix_fast
+from partial_json_parser import fix_fast
 
 console = Console()
 highlight = JSONHighlighter()
