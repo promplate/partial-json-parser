@@ -11,14 +11,36 @@ Here comes `partial-json-parser`, a lightweight and customizable library for par
 ## Installation
 
 ```sh
-pip install partial-json-parser # or poetry / pdm / conda
+pip install partial-json-parser # or poetry / pdm / uv
 ```
 
-`partial-json-parser` is implemented purely in Python, with good type hints.
+`partial-json-parser` is implemented purely in Python, with good type hints. It is zero-dependency and works with Python 3.6+.
+
+You can install run its demo playground by installing `rich` too or:
+
+```sh
+pip install partial-json-parser[playground]
+```
+
+Then run the `json-playground` in your terminal, and you can try the parser interactively.
 
 ## Usage
 
-### Importing the library
+```py
+from partial_json_parser import loads
+
+>>> loads('{"key": "v')  # {'key': 'v'}
+```
+
+Alternatively, you can use `ensure_json` to get the completed JSON string:
+
+```py
+from partial_json_parser import ensure_json
+
+>>> ensure_json('{"key": "v')  # '{"key": "v"}'
+```
+
+### Detailed Usage
 
 You can import the `loads` function and the `Allow` object from the library like this:
 
@@ -83,12 +105,33 @@ loads("wrong")  # MalformedJSON: Malformed node or string on line 1
 
 ## API Reference
 
-### loads(json_string, [allow_partial])
+### loads(json_string, [allow_partial], [parser])
 
-- `json_string` `<string>`: The JSON string to parse.
+- `json_string` `<string>`: The (incomplete) JSON string to parse.
 - `allow_partial` `<Allow | int>`: Specify what kind of partialness is allowed during JSON parsing (default: `Allow.ALL`).
+- `parser` `(str) -> JSON`: An ordinary JSON parser. Default is `json.loads`.
+
+Complete the JSON string and parse it with `parser` function.
 
 Returns the parsed Python value.
+
+Alias: `decode`, `parse_json`.
+
+### ensure_json(json_string, [allow_partial])
+
+- `json_string` `<string>`: The (incomplete) JSON string to complete.
+- `allow_partial` `<Allow | int>`: Specify what kind of partialness is allowed during JSON parsing (default: `Allow.ALL`).
+
+Returns the completed JSON string.
+
+### fix(json_string, [allow_partial])
+
+- `json_string` `<string>`: The (incomplete) JSON string to complete.
+- `allow_partial` `<Allow | int>`: Specify what kind of partialness is allowed during JSON parsing (default: `Allow.ALL`).
+
+Returns a tuple of a slice of the input string and the completion.
+
+Note that this is a low-level API, only useful for debugging and demonstration.
 
 ### Allow
 
