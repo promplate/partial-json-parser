@@ -3,7 +3,7 @@ from rich.highlighter import JSONHighlighter
 from rich.style import Style
 from rich.text import Span
 
-from partial_json_parser import ALL, PartialJSON, complete_any
+from partial_json_parser import fix
 
 console = Console()
 highlight = JSONHighlighter()
@@ -13,15 +13,13 @@ def main():
     while True:
         try:
             input_str = console.input("[d]>>> ")
-            result = complete_any(input_str, ALL, is_top_level=True)
-            if result is False:
-                raise PartialJSON
-            index, completion = result
-            json = input_str if completion is True else input_str[:index] + completion
+
+            head, tail = fix(input_str)
+            json = head + tail
 
             rich_text = highlight(json)
-            if completion is not True and completion:
-                rich_text.spans.append(Span(index, len(json), Style(dim=True)))
+            if tail:
+                rich_text.spans.append(Span(len(head), len(json), Style(dim=True)))
 
             console.print(" " * 3, rich_text)
 

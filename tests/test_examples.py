@@ -2,7 +2,7 @@ from math import isnan
 
 from pytest import raises
 
-from partial_json_parser import MalformedJSON, PartialJSON, parse_json
+from partial_json_parser import MalformedJSON, PartialJSON, fix, parse_json
 from partial_json_parser.options import *
 
 
@@ -87,3 +87,14 @@ def test_error():
         parse_json("{0")
     with raises(MalformedJSON):
         parse_json("--")
+
+
+def test_fix():
+    assert fix("[") == ("[", "]")
+    assert fix("[0.") == ("[0", "]")
+    assert fix('{"key": ') == ("{", "}")
+    assert fix("t") == ("", "true")
+    assert fix("[1", ~NUM) == ("[", "]")
+    assert fix("1", ~NUM) == ("1", "")
+    with raises(PartialJSON):
+        fix("-")

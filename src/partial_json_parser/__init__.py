@@ -27,23 +27,29 @@ def parse_json(json_string: str, allow_partial: Union[Allow, int] = ALL, parser:
     if parser is None:
         from json import loads as parser
 
-    if not isinstance(json_string, str):
-        raise TypeError(f"Expected str, got {type(json_string).__name__}")
-    if not json_string.strip():
-        raise ValueError(f"{json_string!r} is empty")
-    return _parse_json(json_string.strip(), Allow(allow_partial), parser)
+    return parser(ensure_json(json_string, allow_partial))
 
 
-def _parse_json(json_string: str, allow: Allow, parser: Callable[[str], JSON]):
+def ensure_json(json_string: str, allow_partial: Union[Allow, int] = ALL):
+    """get the completed JSON string"""
+
+    head, tail = fix(json_string, allow_partial)
+    return head + tail
+
+
+def fix(json_string: str, allow_partial: Union[Allow, int] = ALL):
+    """get the original slice and the trailing suffix separately"""
+
     try:
-        result = complete_any(json_string, allow, is_top_level=True)  # setting is_top_level to True to treat literal numbers as complete
+        result = complete_any(json_string.strip(), Allow(allow_partial), is_top_level=True)
+        if result is False:
+            raise PartialJSON
+
+        index, completion = result
+        return json_string[:index], ("" if completion is True else completion)
+
     except (AssertionError, IndexError) as err:
         raise MalformedJSON(*err.args) from err
-    if result is False:
-        raise PartialJSON
-    if result[1] is True:
-        return parser(json_string[: result[0]])
-    return parser(json_string[: result[0]] + result[1])
 
 
 def skip_blank(text: str, index: int):
@@ -257,4 +263,4 @@ def complete_num(json_string: str, allow: Allow, is_top_level=False) -> Complete
 loads = decode = parse_json
 
 
-__all__ = ["loads", "decode", "parse_json", "JSONDecodeError", "PartialJSON", "MalformedJSON", "Allow", "JSON"]
+__all__ = ["loads", "decode", "parse_json", "fix", "ensure_json", "JSONDecodeError", "PartialJSON", "MalformedJSON", "Allow", "JSON"]
