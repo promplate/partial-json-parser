@@ -70,7 +70,7 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
                     # { "key": "v
                     return json_string[: container_start + 1], join_closing_tokens(stack)
                 if is_escaped(last_key_start):
-                    last_key_start -= 2
+                    last_key_start -= 1
                 else:
                     last_comma = json_string.rfind(",", container_start, last_key_start)
                     if last_comma == -1:
