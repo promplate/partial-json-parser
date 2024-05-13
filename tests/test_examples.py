@@ -2,7 +2,10 @@ from itertools import accumulate
 from json import dumps
 from math import isnan
 
+from hypothesis import given, settings
+from hypothesis.strategies import integers
 from pytest import raises
+from test_hypotheses import json
 
 from partial_json_parser.core.api import parse_json
 from partial_json_parser.core.complete import fix
@@ -105,6 +108,16 @@ def test_fix():
         fix("-")
 
 
+def consistent(json_string, allow):
+    try:
+        res = fix(json_string, allow)
+        return res == fix_fast(json_string, allow)
+    except PartialJSON as err:
+        with raises(PartialJSON, match=str(err)):
+            fix_fast(json_string, allow)
+        return True
+
+
 def test_consistency():
     dict_example = {"key1": 123, "key2": "value"}
     list_example = [1, 2, None, float("inf"), float("-inf"), float("nan"), True, False, "string", dict_example]
@@ -112,8 +125,14 @@ def test_consistency():
     dict_json = dumps(dict_example)
     list_json = dumps(list_example)
 
-    for json in accumulate(dict_json):
-        assert fix(json) == fix_fast(json)
+    for json_string in (*accumulate(dict_json), *accumulate(list_json)):
+        for allow in range(Allow.ALL + 1):
+            assert consistent(json_string, allow), f"{Allow(allow)!r} - {json_string}"
 
-    for json in accumulate(list_json):
-        assert fix(json) == fix_fast(json)
+
+@settings(deadline=None)
+@given(json, integers(0, Allow.ALL))
+def test_consistencies(json, allow):
+    json_string = dumps(json)
+    for json_string in accumulate(json_string):
+        assert consistent(json_string, allow), f"{Allow(allow)!r} - {json_string}"

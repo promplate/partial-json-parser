@@ -12,8 +12,12 @@ CompleteResult = Union[Tuple[int, Union[str, "Literal[True]"]], "Literal[False]"
 def fix(json_string: str, allow_partial: Union[Allow, int] = ALL):
     """get the original slice and the trailing suffix separately"""
 
+    return _fix(json_string, Allow(allow_partial), True)
+
+
+def _fix(json_string: str, allow: Allow, is_top_level=False):
     try:
-        result = complete_any(json_string.strip(), Allow(allow_partial), is_top_level=True)
+        result = complete_any(json_string.strip(), allow, is_top_level)
         if result is False:
             raise PartialJSON
 
