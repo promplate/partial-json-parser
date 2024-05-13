@@ -7,10 +7,7 @@ from hypothesis.strategies import integers
 from pytest import raises
 from test_hypotheses import json
 
-from partial_json_parser.core.api import parse_json
-from partial_json_parser.core.complete import fix
-from partial_json_parser.core.exceptions import MalformedJSON, PartialJSON
-from partial_json_parser.core.myelin import fix_fast
+from partial_json_parser import *
 from partial_json_parser.core.options import *
 
 

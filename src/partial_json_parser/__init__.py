@@ -4,4 +4,4 @@ from .core.exceptions import *
 from .core.myelin import fix_fast
 from .core.options import *
 
-dumps = decode = parse_json
+loads = decode = parse_json
