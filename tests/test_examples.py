@@ -126,13 +126,12 @@ def test_consistency():
     list_json = dumps(list_example)
 
     for json_string in (*accumulate(dict_json), *accumulate(list_json)):
-        for allow in range(Allow.ALL + 1):
+        for allow in range(ALL + 1):
             assert consistent(json_string, allow), f"{Allow(allow)!r} - {json_string}"
 
 
 @settings(deadline=None)
-@given(json, integers(0, Allow.ALL))
-def test_consistencies(json, allow):
-    json_string = dumps(json)
+@given(json.map(dumps), integers(0, ALL).map(Allow))
+def test_consistencies(json_string, allow):
     for json_string in accumulate(json_string):
         assert consistent(json_string, allow), f"{Allow(allow)!r} - {json_string}"
