@@ -2,7 +2,7 @@ from functools import partial
 from json import dumps
 from timeit import timeit
 
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from partial_json_parser import ALL, ARR, COLLECTION, OBJ, SPECIAL, STR, fix, fix_fast
@@ -18,6 +18,7 @@ def deep_json(depth: int):
 dumps = partial(dumps, ensure_ascii=False)
 
 
+@settings(deadline=None, suppress_health_check={HealthCheck.data_too_large, HealthCheck.too_slow})
 @given(deep_json(2).map(dumps))
 def test_complete_json_faster(json_string: str):
     t1 = timeit(lambda: fix(json_string, 0), number=500) * 1000
@@ -32,6 +33,7 @@ def test_complete_json_faster(json_string: str):
         print(f" {len(json_string):>10} chars - {(v1 - v2) / v1:>6.1%} slower")
 
 
+@settings(deadline=None, suppress_health_check={HealthCheck.data_too_large, HealthCheck.too_slow})
 @given(deep_json(2).map(dumps).map(lambda s: s[: -len(s) // 2]), st.integers(0, 3).map([ALL, COLLECTION, ARR | STR, OBJ | SPECIAL].__getitem__))
 def test_incomplete_json_faster(json_string: str, allow):
     if json_string.startswith("[") and ARR not in allow or json_string.startswith("{") and OBJ not in allow:
@@ -51,6 +53,6 @@ def test_incomplete_json_faster(json_string: str, allow):
 
 def main():
     print()
-    test_complete_json_faster()
     test_incomplete_json_faster()
+    test_complete_json_faster()
     print()

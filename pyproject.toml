@@ -41,8 +41,8 @@ test-examples = "pytest tests/test_examples.py"
 test = { composite = ["test-examples", "test-hypotheses", "test-performance"] }
 format = { composite = ["isort ./{args}", "black ./{args}"] }
 playground = { call = "partial_json_parser.playground:main" }
-pre_build = { composite = ["format", "git stash", "python src/overrides.py"] }
-post_build = { cmd = ["git", "stash", "pop"] }
+pre_build = { composite = ["format", "python src/overrides.py 3.6"] }
+post_build = "python src/overrides.py 3.8"
 
 
 [tool.black]
