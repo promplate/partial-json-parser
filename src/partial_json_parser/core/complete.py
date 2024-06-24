@@ -97,21 +97,17 @@ def complete_str(json_string: str, allow: Allow) -> CompleteResult:
     length = len(json_string)
 
     i = 1
-    last_escaped = -1  # because `str.rfind` returns -1 if not found
 
     try:
         while True:
             char = json_string[i]
 
             if char == "\\":
-                last_escaped = i + 1
-                if last_escaped == length:
+                if i + 1 == length:
                     raise IndexError
-                else:
-                    i += 2
-                    continue
-
-            elif char == '"':
+                i += 2
+                continue
+            if char == '"':
                 return i + 1, True
 
             i += 1
@@ -120,19 +116,24 @@ def complete_str(json_string: str, allow: Allow) -> CompleteResult:
         if STR not in allow:
             return False
 
+        def not_escaped(index: int):
+            text_before = json_string[:index]
+            count = index - len(text_before.rstrip("\\"))
+            return count % 2 == 0
+
         # \uXXXX
         _u = json_string.rfind("\\u", max(0, i - 5), i)
-        if last_escaped != _u != -1:
+        if _u != -1 and not_escaped(_u):
             return _u, '"'
 
         # \UXXXXXXXX
         _U = json_string.rfind("\\U", max(0, i - 9), i)
-        if last_escaped != _U != -1:
+        if _U != -1 and not_escaped(_U):
             return _U, '"'
 
         # \xXX
         _x = json_string.rfind("\\x", max(0, i - 3), i)
-        if last_escaped != _x != -1:
+        if _x != -1 and not_escaped(_x):
             return _x, '"'
 
         return i, '"'

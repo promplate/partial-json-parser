@@ -18,6 +18,7 @@ def test_str():
 
     assert parse_json(r'"\\') == "\\"
     assert parse_json(r'"\\u') == "\\u"
+    assert parse_json(r'"\\U\\u') == "\\U\\u"
 
 
 def test_arr():
