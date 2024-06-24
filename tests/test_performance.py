@@ -29,7 +29,9 @@ def test_complete_json_faster(json_string: str):
     if t1 > t2:
         print(f" {len(json_string):>10} chars - {(v2 - v1) / v1:>6.1%} faster")
     else:
-        print(f"\n {json_string}\n")
+        print()
+        print(json_string)
+        print()
         print(f" {len(json_string):>10} chars - {(v1 - v2) / v1:>6.1%} slower")
 
 
@@ -47,7 +49,9 @@ def test_incomplete_json_faster(json_string: str, allow):
     if t1 > t2:
         print(f" {len(json_string):>10} chars - {(v2 - v1) / v1:>6.1%} faster : {allow!r}")
     else:
-        print(f"\n {json_string}\n")
+        print()
+        print(json_string)
+        print()
         print(f" {len(json_string):>10} chars - {(v1 - v2) / v1:>6.1%} slower : {allow!r}")
 
 
