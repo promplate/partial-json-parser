@@ -61,11 +61,10 @@ print(result)  # Outputs: {'key': 'value'}
 
 You can parse a partial JSON string by passing an additional parameter to the `loads` function. This parameter is a **bitwise OR** of the constants from the `Allow` flag:
 
-(Note that you can directly import the constants you need from `partial-json-parser.options`)
+(Note that you can directly import the constants you need from `partial-json-parser`)
 
 ```py
-from partial_json_parser import loads, Allow
-from partial_json_parser.options import STR, OBJ
+from partial_json_parser import loads, Allow, STR, OBJ
 
 result = loads('{"key": "v', STR | OBJ)
 print(result)  # Outputs: {'key': 'v'}
