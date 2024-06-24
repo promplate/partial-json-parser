@@ -105,9 +105,8 @@ def complete_str(json_string: str, allow: Allow) -> CompleteResult:
             if char == "\\":
                 if i + 1 == length:
                     raise IndexError
-                else:
-                    i += 2
-                    continue
+                i += 2
+                continue
             if char == '"':
                 return i + 1, True
 
