@@ -9,26 +9,43 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "pypy3.7", "pypy3.8", "pypy3.9", "pypy3.10"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "pypy3.7", "pypy3.8", "pypy3.9", "pypy3.10"]
         exclude:
-          - os: macos-latest
+          - os: windows-latest
             python-version: "3.7"
-          - os: macos-latest
+          - os: windows-latest
             python-version: "pypy3.7"
-
+          - os: windows-latest
+            python-version: "pypy3.8"
     steps:
       - uses: actions/checkout@v4
-      - name: Setup PDM and Python ${{ matrix.python-version }}
-        uses: pdm-project/setup-pdm@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install uv
+        run: pip install uv --disable-pip-version-check
+      - name: Install pdm
+        if: matrix.os != 'windows-latest'
+        run: uv tool install pdm
+      - name: Setup Python ${{ matrix.python-version }}
+        if: matrix.os != 'windows-latest' && matrix.python-version != '3.7' && matrix.python-version != 'pypy3.7'
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Setup PDM and Python ${{ matrix.python-version }}
+        uses: pdm-project/setup-pdm@v4
+        if: matrix.os == 'windows-latest'
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Create venv
+        run: uv v -p ${{ matrix.python-version }} || pdm venv create --force
       - name: Install dependencies
-        run: |
-          npm i -g pyright
-          pdm install --group playground --quiet
+        run: pdm export --pyproject | uv pip install -r - .[playground]
       - name: Run tests
         run: |
           pdm test
       - name: Run static type checking
         run: |
+          npm i -g pyright
           pdm run pyright ./src/
