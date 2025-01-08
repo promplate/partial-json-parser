@@ -22,6 +22,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: diff
+    environment: release
     if: needs.diff.outputs.CHANGED == 'true'
     permissions:
       id-token: write
