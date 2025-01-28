@@ -102,6 +102,28 @@ If the JSON string is malformed, the `parse` function will throw an error:
 loads("wrong")  # MalformedJSON: Malformed node or string on line 1
 ```
 
+### Handling text around JSON
+
+Sometimes JSON might be embedded in other text. You can use `PREFIX` and `POSTFIX` options to handle this:
+
+```python
+from partial_json_parser import loads, PREFIX, POSTFIX
+
+# Handle text before JSON
+result = loads('This is your JSON: {"key": "value"}', PREFIX)
+print(result)  # Outputs: {'key': 'value'}
+
+# Handle text after JSON
+result = loads('{"key": "value"} - end of JSON', POSTFIX)
+print(result)  # Outputs: {'key': 'value'}
+
+# Handle both
+result = loads('Start of JSON: {"key": "value"} - end of JSON', PREFIX | POSTFIX)
+print(result)  # Outputs: {'key': 'value'}
+```
+
+Note that `PREFIX` looks for the first `{` or `[` character and `POSTFIX` looks for the last `}` or `]` character to determine the JSON boundaries.
+
 ## API Reference
 
 ### loads(json_string, [allow_partial], [parser])
@@ -149,7 +171,9 @@ Enum class that specifies what kind of partialness is allowed during JSON parsin
 - `SPECIAL`: Allow all special values.
 - `ATOM`: Allow all atomic values.
 - `COLLECTION`: Allow all collection values.
-- `ALL`: Allow all values.
+- `PREFIX`: Allow text before the JSON string starts (e.g. `This is your JSON: {"key": "value"}`).
+- `POSTFIX`: Allow text after the JSON string ends (e.g. `{"key": "value"} - end of JSON`).
+- `ALL`: Allow all values
 
 ## Testing
 
