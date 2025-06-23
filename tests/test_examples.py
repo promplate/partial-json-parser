@@ -4,7 +4,7 @@ from math import isnan
 
 from hypothesis import given, settings
 from hypothesis.strategies import integers
-from pytest import raises
+from pytest import mark, raises
 from test_hypotheses import json
 
 from partial_json_parser import *
@@ -104,6 +104,13 @@ def test_fix():
     assert fix("1", ~NUM) == fix_fast("1", ~NUM) == ("1", "")
     with raises(PartialJSON):
         fix("-")
+
+
+@mark.xfail()
+def test_fix_fast():
+    assert fix_fast('["a", "b', ~STR) == ('["a"', "]")
+    assert fix_fast('["a","b', ~STR) == ('["a"', "]")
+    assert fix_fast('["a" ,"b', ~STR) == ('["a" ', "]")
 
 
 def consistent(json_string, allow):
