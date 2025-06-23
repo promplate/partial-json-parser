@@ -120,7 +120,7 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
             # { "k
             return json_string[: stack[-1][0] + 1], join_closing_tokens(stack)
 
-        last_comma = json_string.rfind(",", max(stack[-1][0], last_string_end) + 1, last_string_start - 1)
+        last_comma = json_string.rfind(",", max(stack[-1][0], last_string_end) + 1, last_string_start)
         if last_comma != -1:
             # { "key": "v", "k
             # { "key": 123, "k
