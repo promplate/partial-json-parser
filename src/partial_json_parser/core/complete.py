@@ -32,8 +32,9 @@ def skip_blank(text: str, index: int):
     try:
         while text[index].isspace():
             index += 1
-    finally:
-        return index
+    except IndexError:
+        pass
+    return index
 
 
 def complete_any(json_string: str, allow: Allow, is_top_level=False) -> CompleteResult:
