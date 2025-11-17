@@ -25,7 +25,7 @@ build-backend = "pdm.backend"
 [tool.pdm.build]
 excludes = ["tests"]
 
-[tool.pdm.dev-dependencies]
+[dependency-groups]
 dev = ["hypothesis", "tqdm", "pytest"]
 
 [tool.pdm.scripts]

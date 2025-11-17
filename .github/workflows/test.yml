@@ -41,7 +41,7 @@ jobs:
       - name: Create venv
         run: uv v -p ${{ matrix.python-version }} || pdm venv create --force
       - name: Install dependencies
-        run: pdm export --pyproject | uv pip install -r - .[playground]
+        run: uv sync --all-extras
       - name: Run tests
         run: |
           pdm test
