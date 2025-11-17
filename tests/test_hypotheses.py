@@ -1,5 +1,6 @@
 from json import dumps
 from os import getenv
+from sys import stdout
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
