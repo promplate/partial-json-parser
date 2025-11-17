@@ -117,7 +117,7 @@ def consistent(json_string, allow):
         res = fix(json_string, allow)
         return res == fix_fast(json_string, allow)
     except PartialJSON as err:
-        with raises(PartialJSON, match=str(err)):
+        with raises(PartialJSON, match=f"^{err}$"):
             fix_fast(json_string, allow)
         return True
 
