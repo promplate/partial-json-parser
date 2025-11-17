@@ -1,4 +1,5 @@
 from json import dumps
+from os import getenv
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -12,7 +13,7 @@ json = st.recursive(
 )
 
 
-bar = tqdm(ascii=True, ncols=200, leave=False)
+bar = tqdm(ascii=True, ncols=200, leave=False) if getenv("CI") or not stdout.isatty() else tqdm(mininterval=0, dynamic_ncols=True)
 FINE_JSON_EXAMPLES = 333
 PARTIAL_JSON_EXAMPLES = 333
 
