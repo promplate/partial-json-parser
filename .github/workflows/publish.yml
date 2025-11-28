@@ -1,6 +1,6 @@
 name: publish
 
-on: 
+on:
   push:
     branches:
       - main
@@ -59,4 +59,3 @@ jobs:
             --title="${VERSION#v}" \
             --generate-notes \
             dist/*
-
