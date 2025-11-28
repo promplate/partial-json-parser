@@ -1,9 +1,5 @@
 name: publish
 
-# Note: this workflow evaluates Python code from this repository.
-# It therefore must not be run on untrusted input (e.g. on pull requests).
-# But that's fine, because we only want to publish when the default branch
-# is pushed to (or when a maintainer manually runs this workflow) anyways.
 on: 
   push:
     branches:
