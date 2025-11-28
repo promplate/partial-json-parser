@@ -42,7 +42,7 @@ jobs:
           python src/overrides.py 3.6
           uv build
       - name: Publish to PyPI
-        if: env.GITHUB_REPOSITORY == 'promplate/partial-json-parser'
+        if: ${{ github.repository == 'promplate/partial-json-parser' }}
         run: uv publish
       - name: Read version number
         id: read-version
