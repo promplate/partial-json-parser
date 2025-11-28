@@ -41,15 +41,9 @@ jobs:
         run: |
           python src/overrides.py 3.6
           uv build
-      - name: Read version number
-        id: read-version
+      - name: Create GitHub release
         run: |
           VERSION="$(grep -m1 -oP '^__version__\s*=\s*"\K[^"]+' src/partial_json_parser/version.py)"
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-      - name: Publish GitHub release
-        env:
-          VERSION: ${{ steps.read-version.outputs.VERSION }}
-        run: |
           gh release create v$VERSION --title=v$VERSION --generate-notes dist/*
       - name: Publish to PyPI
         if: ${{ github.repository == 'promplate/partial-json-parser' }}
