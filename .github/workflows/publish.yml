@@ -51,11 +51,9 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
       - name: Publish GitHub release
         env:
-          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.read-version.outputs.VERSION }}
         run: |
           gh release create "v$VERSION" \
-            --repo="$GITHUB_REPOSITORY" \
-            --title="${VERSION#v}" \
+            --title="v$VERSION" \
             --generate-notes \
             dist/*
