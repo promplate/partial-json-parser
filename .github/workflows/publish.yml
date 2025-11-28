@@ -1,6 +1,10 @@
 name: publish
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   diff:
@@ -25,6 +29,7 @@ jobs:
     environment: release
     if: needs.diff.outputs.CHANGED == 'true'
     permissions:
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +41,10 @@ jobs:
         run: |
           python src/overrides.py 3.6
           uv build
+      - name: Create GitHub release
+        run: |
+          VERSION="$(grep -m1 -oP '^__version__\s*=\s*"\K[^"]+' src/partial_json_parser/version.py)"
+          gh release create v$VERSION --title=v$VERSION --generate-notes dist/*
       - name: Publish to PyPI
-        continue-on-error: true
+        if: ${{ github.repository == 'promplate/partial-json-parser' }}
         run: uv publish
