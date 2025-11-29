@@ -20,6 +20,78 @@ def join_closing_tokens(stack: List[Tuple[int, str]]):
 
 def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
     allow = Allow(allow_partial)
+    
+    # Handle PREFIX by finding first { or [
+    if PREFIX in allow:
+        first_brace = json_string.find('{')
+        first_bracket = json_string.find('[')
+        
+        if first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+            json_string = json_string[first_brace:]
+        elif first_bracket != -1:
+            json_string = json_string[first_bracket:]
+    
+    # Handle POSTFIX by finding last } or ]
+    if POSTFIX in allow:
+        last_brace = json_string.rfind('}')
+        last_bracket = json_string.rfind(']')
+        
+        if last_brace != -1 and (last_bracket == -1 or last_brace > last_bracket):
+            json_string = json_string[:last_brace + 1]
+        elif last_bracket != -1:
+            json_string = json_string[:last_bracket + 1]
+    
+    # Always enable STR when handling PREFIX/POSTFIX
+    if PREFIX in allow or POSTFIX in allow:
+        allow = Allow(allow | STR)
+    
+    return _fix(json_string, allow, True)
+
+
+def fix_fast_old(json_string: str, allow_partial: Union[Allow, int] = ALL):
+    allow = Allow(allow_partial)
+    original_allow = allow
+    
+    # Handle PREFIX by finding first { or [
+    if PREFIX in allow:
+        first_brace = json_string.find('{')
+        first_bracket = json_string.find('[')
+        
+        if first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+            json_string = json_string[first_brace:]
+        elif first_bracket != -1:
+            json_string = json_string[first_bracket:]
+    
+    # Handle POSTFIX by finding matching closing brace/bracket
+    if POSTFIX in allow:
+        # Find opening token
+        first_char = json_string[0] if json_string else ''
+        if first_char not in '{[':
+            # No valid JSON start found
+            return _fix(json_string, original_allow, True)
+            
+        # Find matching closing token
+        closing_char = '}' if first_char == '{' else ']'
+        stack = []
+        in_string = False
+        
+        for i, char in enumerate(json_string):
+            if char == '"' and (i == 0 or json_string[i-1] != '\\'):
+                in_string = not in_string
+            elif not in_string:
+                if char in '{[':
+                    stack.append(char)
+                elif char in ']}':
+                    if not stack:
+                        break
+                    if (char == '}' and stack[-1] == '{') or (char == ']' and stack[-1] == '['):
+                        stack.pop()
+                        if not stack:  # Found matching closing token
+                            json_string = json_string[:i+1]
+                            break
+        
+        # Remove PREFIX/POSTFIX from allow since we've handled them
+        allow = Allow(allow & ~(PREFIX | POSTFIX))
 
     def is_escaped(index: int):
         text_before = json_string[:index]

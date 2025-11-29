@@ -13,12 +13,14 @@ class Allow(IntFlag):
     NAN = auto()
     INFINITY = auto()
     _INFINITY = auto()
+    PREFIX = auto()
+    POSTFIX = auto()
 
     INF = INFINITY | _INFINITY
     SPECIAL = NULL | BOOL | INF | NAN
     ATOM = STR | NUM | SPECIAL
     COLLECTION = ARR | OBJ
-    ALL = ATOM | COLLECTION
+    ALL = ATOM | COLLECTION | PREFIX | POSTFIX
 
 
 STR = Allow.STR
@@ -35,6 +37,8 @@ SPECIAL = Allow.SPECIAL
 ATOM = Allow.ATOM
 COLLECTION = Allow.COLLECTION
 ALL = Allow.ALL
+PREFIX = Allow.PREFIX
+POSTFIX = Allow.POSTFIX
 
 
 __all__ = [
@@ -53,4 +57,6 @@ __all__ = [
     "ATOM",
     "COLLECTION",
     "ALL",
+    "PREFIX",
+    "POSTFIX",
 ]
