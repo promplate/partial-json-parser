@@ -1,10 +1,11 @@
 from itertools import accumulate
 from json import dumps
+from json import loads as standard_loads
 from math import isnan
 
 from hypothesis import given, settings
 from hypothesis.strategies import integers
-from pytest import raises
+from pytest import mark, raises
 from test_hypotheses import json
 
 from partial_json_parser import *
@@ -110,6 +111,48 @@ def test_fix_fast():
     assert fix_fast('["a", "b', ~STR) == ('["a"', "]")
     assert fix_fast('["a","b', ~STR) == ('["a"', "]")
     assert fix_fast('["a" ,"b', ~STR) == ('["a" ', "]")
+
+
+@mark.parametrize("prefix", [" ", "\t", "\r\n", " \t\r\n "])
+@mark.parametrize("use_fast_fix", [True, False])
+@mark.parametrize("json_string", ["123", "-1.25e4", "true", "false", "null", '"tennis"', '"\\u0061"', "[1, true]", '{"score": 0}'])
+def test_complete_json_with_leading_whitespace(prefix, use_fast_fix, json_string):
+    original = prefix + json_string + " \r\n"
+    for allow in (ALL, 0):
+        assert parse_json(original, allow, use_fast_fix=use_fast_fix) == standard_loads(original)
+        assert ensure_json(original, allow, use_fast_fix=use_fast_fix).startswith(prefix)
+
+
+@mark.parametrize("prefix", [" ", "\t", "\r\n", " \t\r\n "])
+@mark.parametrize("complete", [fix, fix_fast])
+@mark.parametrize(
+    "json_string, head, tail, allow, expected",
+    [
+        ('"tennis', '"tennis', '"', STR, "tennis"),
+        ('"te\\u00', '"te', '"', STR, "te"),
+        ("12e+", "12", "", NUM, 12),
+        ("t", "", "true", BOOL, True),
+        ("f", "", "false", BOOL, False),
+        ("n", "", "null", NULL, None),
+        ('[1, "tennis', '[1, "tennis', '"]', ARR | STR, [1, "tennis"]),
+        ('{"score": t', '{"score": ', "true}", OBJ | BOOL, {"score": True}),
+    ],
+)
+def test_partial_json_with_leading_whitespace(prefix, complete, json_string, head, tail, allow, expected):
+    original = prefix + json_string
+    actual_head, actual_tail = complete(original, allow)
+    assert (actual_head, actual_tail) == (prefix + head, tail)
+    assert original.startswith(actual_head)
+    assert standard_loads(actual_head + actual_tail) == expected
+
+
+@mark.parametrize("prefix", [" ", "\t", "\r\n", " \t\r\n "])
+@mark.parametrize("complete", [fix, fix_fast])
+def test_leading_whitespace_keeps_partial_restrictions(prefix, complete):
+    with raises(PartialJSON):
+        complete(prefix + "t", ~BOOL)
+    with raises(MalformedJSON):
+        complete(prefix)
 
 
 def consistent(json_string, allow):

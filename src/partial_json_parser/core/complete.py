@@ -17,12 +17,13 @@ def fix(json_string: str, allow_partial: Union[Allow, int] = ALL):
 
 def _fix(json_string: str, allow: Allow, is_top_level=False):
     try:
+        start = len(json_string) - len(json_string.lstrip())
         result = complete_any(json_string.strip(), allow, is_top_level)
         if result is False:
             raise PartialJSON
 
         index, completion = result
-        return json_string[:index], ("" if completion is True else completion)
+        return json_string[: start + index], ("" if completion is True else completion)
 
     except (AssertionError, IndexError) as err:
         raise MalformedJSON(*err.args) from err
