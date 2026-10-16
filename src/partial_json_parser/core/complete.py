@@ -17,7 +17,8 @@ def fix(json_string: str, allow_partial: Union[Allow, int] = ALL):
 
 def _fix(json_string: str, allow: Allow, is_top_level=False):
     try:
-        result = complete_any(json_string.strip(), allow, is_top_level)
+        # Trailing whitespace can belong to an unfinished string.
+        result = complete_any(json_string.lstrip(), allow, is_top_level)
         if result is False:
             raise PartialJSON
 
@@ -45,13 +46,16 @@ def complete_any(json_string: str, allow: Allow, is_top_level=False) -> Complete
         return complete_str(json_string, allow)
 
     if char in "1234567890":
-        return complete_num(json_string, allow, is_top_level)
+        return complete_num(json_string.rstrip(), allow, is_top_level)
 
     if char == "[":
         return complete_arr(json_string, allow)
 
     if char == "{":
         return complete_obj(json_string, allow)
+
+    # Literal recovery does not need to preserve string content.
+    json_string = json_string.rstrip()
 
     if json_string.startswith("null"):
         return (4, True)
@@ -122,18 +126,27 @@ def complete_str(json_string: str, allow: Allow) -> CompleteResult:
             count = index - len(text_before.rstrip("\\"))
             return count % 2 == 0
 
+        # Keep the existing recovery of incomplete escapes and control suffixes.
+        trimmed_end = len(json_string.rstrip())
+        escape_end = min(i, trimmed_end)
+        if escape_end and json_string[escape_end - 1] == "\\" and not_escaped(escape_end - 1):
+            escape_end -= 1
+            i = escape_end
+        elif any(ord(char) < 32 for char in json_string[trimmed_end:]):
+            i = trimmed_end
+
         # \uXXXX
-        _u = json_string.rfind("\\u", max(0, i - 5), i)
+        _u = json_string.rfind("\\u", max(0, escape_end - 5), escape_end)
         if _u != -1 and not_escaped(_u):
             return _u, '"'
 
         # \UXXXXXXXX
-        _U = json_string.rfind("\\U", max(0, i - 9), i)
+        _U = json_string.rfind("\\U", max(0, escape_end - 9), escape_end)
         if _U != -1 and not_escaped(_U):
             return _U, '"'
 
         # \xXX
-        _x = json_string.rfind("\\x", max(0, i - 3), i)
+        _x = json_string.rfind("\\x", max(0, escape_end - 3), escape_end)
         if _x != -1 and not_escaped(_x):
             return _x, '"'
 
