@@ -22,9 +22,10 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
     allow = Allow(allow_partial)
 
     def is_escaped(index: int):
-        text_before = json_string[:index]
-        count = index - len(text_before.rstrip("\\"))
-        return count % 2
+        start = index
+        while start and json_string[start - 1] == "\\":
+            start -= 1
+        return (index - start) % 2
 
     stack = []
     in_string = False

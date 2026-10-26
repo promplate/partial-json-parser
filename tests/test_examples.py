@@ -4,7 +4,7 @@ from math import isnan
 
 from hypothesis import given, settings
 from hypothesis.strategies import integers
-from pytest import raises
+from pytest import mark, raises
 from test_hypotheses import json
 
 from partial_json_parser import *
@@ -139,3 +139,48 @@ def test_consistency():
 def test_consistencies(json_string, allow):
     for json_string in accumulate(json_string):
         assert consistent(json_string, allow), f"{Allow(allow)!r} - {json_string}"
+
+
+class SliceCounter(str):
+    """Measure requested slice lengths without timing or large allocations."""
+
+    def __new__(cls, value):
+        instance = super().__new__(cls, value)
+        instance.sliced_characters = 0
+        return instance
+
+    def __getitem__(self, key):
+        result = super().__getitem__(key)
+        if isinstance(key, slice):
+            self.sliced_characters += len(result)
+        return result
+
+
+@mark.parametrize("count", [32, 64, 128])
+@mark.parametrize("partial", [False, True])
+def test_string_array_slice_work_is_linear(count, partial):
+    values = ["abc"] * count
+    encoded = dumps(values)
+    text = SliceCounter(encoded[:-1] if partial else encoded)
+    assert loads(text) == values
+    # Permit linear copying for completion, but not a prefix copy per quote.
+    assert text.sliced_characters <= 4 * len(text)
+
+
+@mark.parametrize("slashes", range(9))
+@mark.parametrize("container", [list, dict])
+def test_escape_runs_in_every_prefix(slashes, container):
+    value = "\\" * slashes + '"[]{}'
+    document = [value, "tail\\"] if container is list else {value: value, "tail\\": "end"}
+    encoded = dumps(document)
+    assert loads(encoded) == document
+    for end in range(1, len(encoded) + 1):
+        prefix = encoded[:end]
+        for allow in range(ALL + 1):
+            try:
+                expected = fix(prefix, allow)
+            except PartialJSON:
+                with raises(PartialJSON):
+                    fix_fast(prefix, allow)
+            else:
+                assert fix_fast(prefix, allow) == expected
