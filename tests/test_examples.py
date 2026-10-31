@@ -95,6 +95,14 @@ def test_error():
         parse_json("--")
 
 
+def test_malformed_closing_tokens():
+    for json_string in ("]", "}", "[}", "{]", '{"a": 1]', "[1, 2}"):
+        with raises(MalformedJSON):
+            fix_fast(json_string)
+        with raises(MalformedJSON):
+            parse_json(json_string)
+
+
 def test_fix():
     assert fix("[") == fix_fast("[") == ("[", "]")
     assert fix("[0.") == fix_fast("[0.") == ("[0", "]")
