@@ -4,7 +4,7 @@ from re import compile
 from typing import List, Tuple, Union
 
 from .complete import _fix
-from .exceptions import PartialJSON
+from .exceptions import MalformedJSON, PartialJSON
 from .options import *
 
 finditer = compile(r'["\[\]{}]').finditer
@@ -47,11 +47,13 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
 
         elif not in_string:
             if char == "}":
-                _i, _char = stack.pop()
-                assert _char == "{", f"Expected '{{' at index {_i}, got '{_char}'"
+                if not stack or stack[-1][1] != "{":
+                    raise MalformedJSON(f"Unexpected token {char!r} at index {i}")
+                stack.pop()
             elif char == "]":
-                _i, _char = stack.pop()
-                assert _char == "[", f"Expected '[' at index {_i}, got '{_char}'"
+                if not stack or stack[-1][1] != "[":
+                    raise MalformedJSON(f"Unexpected token {char!r} at index {i}")
+                stack.pop()
             else:
                 stack.append((i, char))
 
