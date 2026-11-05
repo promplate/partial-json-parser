@@ -95,6 +95,22 @@ def test_error():
         parse_json("--")
 
 
+def test_error_negative_number_prefix():
+    """a `-` not followed by a digit (except `-Infinity`) is malformed, not silently completed"""
+    with raises(MalformedJSON):
+        parse_json("-x")
+    with raises(MalformedJSON):
+        parse_json("-inf")  # lowercase; `-Inf`/`-Infinity` are handled separately
+    with raises(MalformedJSON):
+        parse_json("-.5")
+    with raises(MalformedJSON):
+        parse_json("-e3")
+
+    assert parse_json("-0") == 0
+    assert parse_json("-1.5") == -1.5
+    assert parse_json("-Infinity") == float("-inf")
+
+
 def test_fix():
     assert fix("[") == fix_fast("[") == ("[", "]")
     assert fix("[0.") == fix_fast("[0.") == ("[0", "]")
