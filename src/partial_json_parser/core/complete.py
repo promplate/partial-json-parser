@@ -218,6 +218,10 @@ def complete_obj(json_string: str, allow: Allow) -> CompleteResult:
 
 
 def complete_num(json_string: str, allow: Allow, is_top_level=False) -> CompleteResult:
+    # a `-` must be followed by a digit; `-Infinity` never reaches here
+    if json_string[0] == "-" and json_string[1] not in "1234567890":
+        raise MalformedJSON(f"Unexpected character {json_string[1]}")
+
     i = 1
     length = len(json_string)
 

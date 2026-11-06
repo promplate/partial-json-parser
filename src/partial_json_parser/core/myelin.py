@@ -30,6 +30,7 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
     in_string = False
     last_string_start = -1
     last_string_end = -1
+    string_ranges = []
 
     tokens = scan(json_string)
 
@@ -44,6 +45,7 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
             elif not is_escaped(i):
                 in_string = False
                 last_string_end = i
+                string_ranges.append((last_string_start, last_string_end + 1))
 
         elif not in_string:
             if char == "}":
@@ -56,6 +58,18 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
                 stack.append((i, char))
 
     if not stack:
+        # The closed-collection shortcut otherwise bypasses atomic validation
+        # and can leak json.JSONDecodeError for malformed negative numbers.
+        # Walk the string ranges once, using the same ASCII digits as the
+        # number parser; only the bounded atom is validated.
+        current_range = 0
+        for match in compile(r'(?<![\w\]"\\])-(?![0-9])').finditer(json_string):
+            while current_range < len(string_ranges) and match.start() >= string_ranges[current_range][1]:
+                current_range += 1
+            if current_range < len(string_ranges) and match.start() >= string_ranges[current_range][0]:
+                continue
+            atom = json_string[match.start() :].split(",", 1)[0].strip()
+            _fix(atom, allow, True)
         return json_string, ""
 
     # check if the opening tokens are allowed
