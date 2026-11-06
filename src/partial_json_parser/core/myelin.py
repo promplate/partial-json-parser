@@ -30,6 +30,7 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
     in_string = False
     last_string_start = -1
     last_string_end = -1
+    string_ranges = []
 
     tokens = scan(json_string)
 
@@ -44,6 +45,7 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
             elif not is_escaped(i):
                 in_string = False
                 last_string_end = i
+                string_ranges.append((last_string_start, last_string_end + 1))
 
         elif not in_string:
             if char == "}":
@@ -56,6 +58,12 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
                 stack.append((i, char))
 
     if not stack:
+        # The closed-collection shortcut otherwise bypasses atomic validation
+        # and can leak json.JSONDecodeError for malformed negative numbers.
+        # Check only outside strings, where the quotes have already been found.
+        for match in compile(r'(?<![\w\]"\\])-(?!\d)').finditer(json_string):
+            if not any(start <= match.start() < end for start, end in string_ranges):
+                _fix(json_string[match.start() :], allow, True)
         return json_string, ""
 
     # check if the opening tokens are allowed

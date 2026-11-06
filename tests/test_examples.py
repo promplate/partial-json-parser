@@ -111,6 +111,18 @@ def test_error_negative_number_prefix():
     assert parse_json("-Infinity") == float("-inf")
 
 
+def test_error_negative_number_prefix_inside_closed_collections():
+    """closed collections must validate their negative atoms too, on both paths"""
+    for text in ["[-x]", '{"a": -x}', "[-.5]", "[-e3]", '[{"a": 1}, -x]']:
+        for use_fast_fix in (True, False):
+            with raises(MalformedJSON):
+                parse_json(text, use_fast_fix=use_fast_fix)
+
+    for text in ["[-1]", '{"a": -1}', "[1, -2]", '{"a": 1, "b": -2.5}', "[-Infinity]"]:
+        for use_fast_fix in (True, False):
+            assert parse_json(text, use_fast_fix=use_fast_fix) == __import__("json").loads(text)
+
+
 def test_fix():
     assert fix("[") == fix_fast("[") == ("[", "]")
     assert fix("[0.") == fix_fast("[0.") == ("[0", "]")
