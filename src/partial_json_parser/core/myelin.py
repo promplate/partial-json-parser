@@ -60,10 +60,16 @@ def fix_fast(json_string: str, allow_partial: Union[Allow, int] = ALL):
     if not stack:
         # The closed-collection shortcut otherwise bypasses atomic validation
         # and can leak json.JSONDecodeError for malformed negative numbers.
-        # Check only outside strings, where the quotes have already been found.
-        for match in compile(r'(?<![\w\]"\\])-(?!\d)').finditer(json_string):
-            if not any(start <= match.start() < end for start, end in string_ranges):
-                _fix(json_string[match.start() :], allow, True)
+        # Walk the string ranges once, using the same ASCII digits as the
+        # number parser; only the bounded atom is validated.
+        current_range = 0
+        for match in compile(r'(?<![\w\]"\\])-(?![0-9])').finditer(json_string):
+            while current_range < len(string_ranges) and match.start() >= string_ranges[current_range][1]:
+                current_range += 1
+            if current_range < len(string_ranges) and match.start() >= string_ranges[current_range][0]:
+                continue
+            atom = json_string[match.start() :].split(",", 1)[0].strip()
+            _fix(atom, allow, True)
         return json_string, ""
 
     # check if the opening tokens are allowed
